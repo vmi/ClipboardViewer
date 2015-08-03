@@ -15,15 +15,6 @@ namespace ClipboardViewer
     {
         private static Regex TOKEN_RE = new Regex(@"\G(?:(?<sp>\r\n|[\p{Cc}\p{Zs}])|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
 
-        private static Dictionary<string, string> SP_MAP = new Dictionary<string, string>()
-        {
-            { "\r\n", "⏎" },
-            { "\n", "↲" },
-            { "\r", "↤" },
-            { "\t", "↦" },
-            { " ", "␣" },
-            { "\u3000", "□" },
-        };
         private ClipboardHelper clipboardHelper = new ClipboardHelper();
         private FontFamily fontFamily = new FontFamily("Meiryo");
         private double fontSize = 12;
