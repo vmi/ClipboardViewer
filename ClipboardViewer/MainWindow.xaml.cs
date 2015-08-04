@@ -26,7 +26,7 @@ namespace ClipboardViewer
 
         private Paragraph NextParagraph(Paragraph prevParagraph)
         {
-            if (prevParagraph?.Inlines.Count > 0)
+            if (prevParagraph != null && prevParagraph.Inlines.Count > 0)
                 richTextBox.Document.Blocks.Add(prevParagraph);
             var paragraph = new Paragraph();
             paragraph.FontFamily = fontFamily;
