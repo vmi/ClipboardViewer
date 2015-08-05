@@ -6,8 +6,13 @@
         xmlns:local="clr-namespace:ClipboardViewer"
         mc:Ignorable="d"
         Title="Clipboard Viewer" Height="115" Width="800" Closed="ClipboardViewer_Closed" ContentRendered="ClipboardViewer_ContentRendered">
+    <Window.Resources>
+        <ContextMenu x:Key="menu">
+            <MenuItem Header="Top Most" IsCheckable="True" Checked="MenuItem_Checked" Unchecked="MenuItem_Checked"/>
+        </ContextMenu>
+    </Window.Resources>
     <Grid>
-        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" VerticalScrollBarVisibility="Auto" IsReadOnly="True">
+        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" VerticalScrollBarVisibility="Auto" IsReadOnly="True" ContextMenu="{DynamicResource menu}">
             <RichTextBox.Resources>
                 <Style TargetType="{x:Type Paragraph}">
                     <Setter Property="Margin" Value="0" />

@@ -15,6 +15,7 @@ namespace ClipboardViewer
     {
         private static Regex TOKEN_RE = new Regex(@"\G(?:(?<sp>\r\n|[\p{Cc}\p{Zs}])|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
 
+        private string origTitle = null;
         private ClipboardHelper clipboardHelper = new ClipboardHelper();
         private FontFamily fontFamily = new FontFamily("Meiryo");
         private double fontSize = 12;
@@ -113,6 +114,18 @@ namespace ClipboardViewer
         {
             if (clipboardHelper.IsRegistered())
                 clipboardHelper.DeregisterHandler();
+        }
+
+        private void MenuItem_Checked(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as MenuItem;
+            Topmost = menuItem.IsChecked;
+            if (origTitle == null)
+                origTitle = Title;
+            if (Topmost)
+                Title = origTitle + " (Top Most)";
+            else
+                Title = origTitle;
         }
     }
 }
