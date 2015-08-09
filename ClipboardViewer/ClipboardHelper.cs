@@ -5,7 +5,20 @@ using System.Windows.Interop;
 
 namespace ClipboardViewer
 {
-    public class ClipboardHelper
+    internal class NativeMethods
+    {
+        [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
+        internal static extern IntPtr SetClipboardViewer(IntPtr hWndNewViewer);
+
+        [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
+        internal static extern bool ChangeClipboardChain(IntPtr hWndRemove, IntPtr hWndNewNext);
+
+        [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
+        internal extern static IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+    }
+
+
+    public sealed class ClipboardHelper : IDisposable
     {
         private const int WM_DRAWCLIPBOARD = 0x0308;
         private const int WM_CHANGECBCHAIN = 0x030D;
@@ -13,15 +26,6 @@ namespace ClipboardViewer
         private Action callback;
         private HwndSource hWndSource = null;
         private IntPtr nextHandle;
-
-        [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr SetClipboardViewer(IntPtr hWndNewViewer);
-
-        [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern bool ChangeClipboardChain(IntPtr hWndRemove, IntPtr hWndNewNext);
-
-        [DllImport("user32", CharSet = CharSet.Auto, SetLastError = true)]
-        private extern static int SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
         public void RegisterHandler(Window window, Action callback)
         {
@@ -31,14 +35,14 @@ namespace ClipboardViewer
             WindowInteropHelper wih = new WindowInteropHelper(window);
             this.hWndSource = HwndSource.FromHwnd(wih.Handle);
             this.hWndSource.AddHook(WndProc);
-            this.nextHandle = SetClipboardViewer(hWndSource.Handle);
+            this.nextHandle = NativeMethods.SetClipboardViewer(hWndSource.Handle);
         }
 
         public void DeregisterHandler()
         {
             if (hWndSource == null)
                 return;
-            ChangeClipboardChain(hWndSource.Handle, nextHandle);
+            NativeMethods.ChangeClipboardChain(hWndSource.Handle, nextHandle);
             hWndSource.RemoveHook(WndProc);
             hWndSource = null;
             nextHandle = IntPtr.Zero;
@@ -59,22 +63,32 @@ namespace ClipboardViewer
                     {
                         callback.Invoke();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         DeregisterHandler();
-                        throw e;
+                        throw;
                     }
-                    SendMessage(nextHandle, msg, wParam, lParam);
+                    NativeMethods.SendMessage(nextHandle, msg, wParam, lParam);
                     break;
 
                 case WM_CHANGECBCHAIN:
                     if (wParam == nextHandle)
                         nextHandle = lParam;
                     else if (nextHandle != IntPtr.Zero)
-                        SendMessage(nextHandle, msg, wParam, lParam);
+                        NativeMethods.SendMessage(nextHandle, msg, wParam, lParam);
                     break;
             }
             return IntPtr.Zero;
+        }
+
+        public void Dispose()
+        {
+            DeregisterHandler();
+        }
+
+        ~ClipboardHelper()
+        {
+            Dispose();
         }
     }
 }

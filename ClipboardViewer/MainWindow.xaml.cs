@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,9 +12,10 @@ namespace ClipboardViewer
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック
     /// </summary>
-    public partial class MainWindow : Window
+    public sealed partial class MainWindow : Window, IDisposable
     {
-        private static Regex TOKEN_RE = new Regex(@"\G(?:(?<sp>\r\n|[\p{Cc}\p{Zs}])|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
+        private static Regex TOKEN_RE = new Regex(@"\G(?:(?<nl>(?:\r\n?|\n)+)|(?<tab>\t+)|(?<sp> +)|(?<wsp>\u3000+)|(?<ctrl[\p{Cc}\p{Zs}-[\r\n\t \u3000]]+)|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
+        private static string NL = Environment.NewLine;
 
         private string origTitle = null;
         private ClipboardHelper clipboardHelper = new ClipboardHelper();
@@ -25,71 +27,97 @@ namespace ClipboardViewer
             InitializeComponent();
         }
 
-        private Paragraph NextParagraph(Paragraph prevParagraph)
-        {
-            if (prevParagraph != null && prevParagraph.Inlines.Count > 0)
-                richTextBox.Document.Blocks.Add(prevParagraph);
-            var paragraph = new Paragraph();
-            paragraph.FontFamily = fontFamily;
-            paragraph.FontSize = fontSize;
-            return paragraph;
-        }
-
         private void DrawClipboard()
         {
             richTextBox.Document.Blocks.Clear();
-            var paragraph = NextParagraph(null);
+            var paragraph = new Paragraph();
+            paragraph.FontFamily = fontFamily;
+            paragraph.FontSize = fontSize;
+            var textBlock = new TextBlock();
+            paragraph.Inlines.Add(textBlock);
             if (Clipboard.ContainsText())
             {
-                var text = Clipboard.GetText();
-                foreach (Match match in TOKEN_RE.Matches(text))
+                var cbText = Clipboard.GetText();
+                for (var match = TOKEN_RE.Match(cbText); match.Success; match = match.NextMatch())
                 {
+                    var nl = match.Groups["nl"];
+                    if (nl.Length > 0)
+                    {
+                        var len = nl.Value.Replace("\r\n", "\n").Length;
+                        var text = new StringBuilder((1 + NL.Length) * len);
+                        for (var i = 0; i < len; i++)
+                            text.Append('⏎').Append(NL);
+                        var elem = new Run(text.ToString());
+                        elem.Foreground = Brushes.Red;
+                        textBlock.Inlines.Add(elem);
+                        continue;
+                    }
+                    var tab = match.Groups["tab"];
+                    if (tab.Length > 0)
+                    {
+                        var text = new string('↦', tab.Length);
+                        var elem = new TextBlock(new Run(text));
+                        elem.Foreground = Brushes.Red;
+                        elem.LayoutTransform = new ScaleTransform(2, 1);
+                        textBlock.Inlines.Add(elem);
+                        continue;
+                    }
                     var sp = match.Groups["sp"];
                     if (sp.Length > 0)
                     {
-                        switch (sp.Value)
-                        {
-                            case "\r\n":
-                            case "\r":
-                            case "\n":
-                                var nl = new Run("⏎");
-                                nl.Foreground = Brushes.Red;
-                                paragraph.Inlines.Add(nl);
-                                paragraph = NextParagraph(paragraph);
-                                break;
-
-                            case "\t":
-                                var tab = new TextBlock(new Run("↦"));
-                                tab.Foreground = Brushes.Red;
-                                tab.LayoutTransform = new ScaleTransform(2, 1);
-                                paragraph.Inlines.Add(tab);
-                                break;
-
-                            case " ":
-                                var spc = new TextBlock(new Run("␣"));
-                                spc.Foreground = Brushes.Red;
-                                spc.Padding = new Thickness(1, 0, 1, 0);
-                                spc.LayoutTransform = new ScaleTransform(0.75, 1);
-                                paragraph.Inlines.Add(spc);
-                                break;
-
-                            case "\u3000":
-                                var wspc = new Run("□");
-                                wspc.Foreground = Brushes.Red;
-                                paragraph.Inlines.Add(wspc);
-                                break;
-
-                            default:
-                                var esc = new Run(string.Format(@"\u{0:X4}", sp.Value[0]));
-                                esc.Foreground = Brushes.Red;
-                                paragraph.Inlines.Add(esc);
-                                break;
-                        }
+                        var text = new string('␣', sp.Length);
+                        var elem = new TextBlock(new Run(text));
+                        elem.Foreground = Brushes.Red;
+                        elem.Padding = new Thickness(1, 0, 1, 0);
+                        elem.LayoutTransform = new ScaleTransform(0.75, 1);
+                        textBlock.Inlines.Add(elem);
+                        continue;
                     }
-                    else
+                    var wsp = match.Groups["wsp"];
+                    if (wsp.Length > 0)
                     {
-                        paragraph.Inlines.Add(new Run(match.Groups["ch"].Value));
+                        var text = new string('□', wsp.Length);
+                        var elem = new Run(text);
+                        elem.Foreground = Brushes.Red;
+                        textBlock.Inlines.Add(elem);
+                        continue;
                     }
+                    var ctrl = match.Groups["ctrl"];
+                    if (ctrl.Length > 0)
+                    {
+                        var text = new StringBuilder(ctrl.Length * 10);
+                        char pc = '\u0000';
+                        foreach (char c in ctrl.Value) {
+                            if (char.IsHighSurrogate(c))
+                            {
+                                pc = c;
+                                continue;
+                            }
+                            else if (char.IsLowSurrogate(c))
+                            {
+                                int cp = char.ConvertToUtf32(pc, c);
+                                text.Append(string.Format("\\u{0:X6}", cp));
+                            }
+                            else if (c <= 0x1f)
+                            {
+                                text.Append('^').Append('@' + c);
+                            }
+                            else if (c == 0x80)
+                            {
+                                text.Append("^?");
+                            }
+                            else
+                            {
+                                text.Append(string.Format("\\u{0:X4}", c));
+                            }
+                        }
+                        var elem = new Run(text.ToString());
+                        elem.Foreground = Brushes.Red;
+                        textBlock.Inlines.Add(elem);
+                        continue;
+                    }
+                    var ch = match.Groups["ch"];
+                    textBlock.Inlines.Add(new Run(match.Groups["ch"].Value));
                 }
             }
             else
@@ -97,10 +125,8 @@ namespace ClipboardViewer
                 var notText = new Run("(not text)");
                 notText.Foreground = Brushes.Firebrick;
                 notText.FontStyle = FontStyles.Italic;
-                paragraph.Inlines.Add(notText);
+                textBlock.Inlines.Add(notText);
             }
-            if (paragraph.Inlines.Count > 0)
-                richTextBox.Document.Blocks.Add(paragraph);
         }
 
         private void ClipboardViewer_ContentRendered(object sender, EventArgs e)
@@ -126,6 +152,11 @@ namespace ClipboardViewer
                 Title = origTitle + " (Top Most)";
             else
                 Title = origTitle;
+        }
+
+        public void Dispose()
+        {
+            clipboardHelper.Dispose();
         }
     }
 }
