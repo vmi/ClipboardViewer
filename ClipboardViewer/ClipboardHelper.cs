@@ -18,7 +18,7 @@ namespace ClipboardViewer
 
     }
 
-    public class ClipboardHelper
+    public sealed class ClipboardHelper : IDisposable
     {
         private const int WM_DRAWCLIPBOARD = 0x0308;
         private const int WM_CHANGECBCHAIN = 0x030D;
@@ -79,6 +79,16 @@ namespace ClipboardViewer
                     break;
             }
             return IntPtr.Zero;
+        }
+
+        public void Dispose()
+        {
+            DeregisterHandler();
+        }
+
+        ~ClipboardHelper()
+        {
+            Dispose();
         }
     }
 }

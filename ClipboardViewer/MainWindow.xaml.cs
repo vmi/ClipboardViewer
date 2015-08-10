@@ -11,7 +11,7 @@ namespace ClipboardViewer
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック
     /// </summary>
-    public partial class MainWindow : Window
+    public sealed partial class MainWindow : Window, IDisposable
     {
         private static Regex TOKEN_RE = new Regex(@"\G(?:(?<sp>\r\n|[\p{Cc}\p{Zs}])|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
 
@@ -126,6 +126,11 @@ namespace ClipboardViewer
                 Title = origTitle + " (Top Most)";
             else
                 Title = origTitle;
+        }
+
+        public void Dispose()
+        {
+            clipboardHelper.Dispose();
         }
     }
 }
