@@ -41,8 +41,8 @@ namespace ClipboardViewer
             var paragraph = NextParagraph(null);
             if (Clipboard.ContainsText())
             {
-                var text = Clipboard.GetText();
-                foreach (Match match in TOKEN_RE.Matches(text))
+                var cbText = Clipboard.GetText();
+                for (Match match = TOKEN_RE.Match(cbText); match.Success; match = match.NextMatch())
                 {
                     var sp = match.Groups["sp"];
                     if (sp.Length > 0)
