@@ -5,10 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ClipboardViewer"
         mc:Ignorable="d"
-        Title="Clipboard Viewer" Height="115" Width="800" Closed="ClipboardViewer_Closed" ContentRendered="ClipboardViewer_ContentRendered">
+        Title="Clipboard Viewer" Height="115" Width="800" Closed="ClipboardViewer_Closed" ContentRendered="ClipboardViewer_ContentRendered" SizeChanged="ClipboardViewer_SaveSizeAndLocation" LocationChanged="ClipboardViewer_SaveSizeAndLocation">
     <Window.Resources>
         <ContextMenu x:Key="menu">
-            <MenuItem Header="Top Most" IsCheckable="True" Checked="MenuItem_Checked" Unchecked="MenuItem_Checked"/>
+            <MenuItem x:Name="TopMost" Header="Top Most" IsCheckable="True" Checked="MenuItem_Checked" Unchecked="MenuItem_Checked"/>
+            <MenuItem x:Name="SelectFont" Header="Select Font" Click="SelectFont_Click"/>
         </ContextMenu>
     </Window.Resources>
     <Grid>

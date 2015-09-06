@@ -17,21 +17,24 @@ namespace ClipboardViewer
 
         private string origTitle = null;
         private ClipboardHelper clipboardHelper = new ClipboardHelper();
-        private FontFamily fontFamily = SystemFonts.MessageFontFamily;
         private FontFamily wsFontFamily = new FontFamily(new Uri("pack://application:,,,/Resources/"), "./#Whitespaces");
-        private double fontSize = 12;
 
         public MainWindow()
         {
             InitializeComponent();
-        }
-
-        private Paragraph NewParagraph()
-        {
-            var paragraph = new Paragraph();
-            paragraph.FontFamily = fontFamily;
-            paragraph.FontSize = fontSize;
-            return paragraph;
+            var settings = Properties.Settings.Default;
+            if (settings.FontName.Length > 0)
+                richTextBox.FontFamily = new FontFamily(settings.FontName);
+            if (settings.FontSize > 0)
+                richTextBox.FontSize = settings.FontSize;
+            if (settings.WindowWidth > 0)
+            {
+                Width = settings.WindowWidth;
+                Height = settings.WindowHeight;
+                Left = settings.WindowLeft;
+                Top = settings.WindowTop;
+            }
+            
         }
 
         private enum CBStatus
@@ -45,7 +48,7 @@ namespace ClipboardViewer
         private void DrawClipboard()
         {
             richTextBox.Document.Blocks.Clear();
-            var paragraph = NewParagraph();
+            var paragraph = new Paragraph();
             CBStatus cbStatus;
             string cbText;
             if (Clipboard.ContainsText())
@@ -110,7 +113,7 @@ namespace ClipboardViewer
                     var wsMatch = match.Groups["ws"];
                     if (wsMatch.Length > 0)
                     {
-                        var item = new Run(new string('\u3000', wsMatch.Length));
+                        var item = new Run(new string('\ue005', wsMatch.Length));
                         item.FontFamily = wsFontFamily;
                         item.Foreground = Brushes.Red;
                         paragraph.Inlines.Add(item);
@@ -182,6 +185,41 @@ namespace ClipboardViewer
         public void Dispose()
         {
             clipboardHelper.Dispose();
+        }
+
+        private void SelectFont_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new System.Windows.Forms.FontDialog();
+            string curname = richTextBox.FontFamily.Source;
+            float cursize = (float)(richTextBox.FontSize * 72.0 / 96.0);
+            dialog.Font = new System.Drawing.Font(curname, cursize);
+            dialog.ShowEffects = false;
+            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                return;
+            var f = dialog.Font;
+            string newname = f.FontFamily.Name;
+            double newsize = f.SizeInPoints * 96.0 / 72.0;
+            richTextBox.FontFamily = new FontFamily(newname);
+            richTextBox.FontSize = newsize;
+            var settings = Properties.Settings.Default;
+            settings.FontName = newname;
+            settings.FontSize = newsize;
+            settings.Save();
+        }
+
+        private void ClipboardViewer_SaveSizeAndLocation(object sender, EventArgs e)
+        {
+            var settings = Properties.Settings.Default;
+            settings.WindowWidth = Width;
+            settings.WindowHeight = Height;
+            settings.WindowLeft = Left;
+            settings.WindowTop = Top;
+            settings.Save();
+        }
+
+        private void ClipboardViewer_SaveSizeAndLocation(object sender, SizeChangedEventArgs e)
+        {
+            ClipboardViewer_SaveSizeAndLocation(sender, (EventArgs) e);
         }
     }
 }
