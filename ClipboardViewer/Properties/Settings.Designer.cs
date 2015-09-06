@@ -98,12 +98,12 @@ namespace ClipboardViewer.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool IsTopMost {
+        public bool Topmost {
             get {
-                return ((bool)(this["IsTopMost"]));
+                return ((bool)(this["Topmost"]));
             }
             set {
-                this["IsTopMost"] = value;
+                this["Topmost"] = value;
             }
         }
     }

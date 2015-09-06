@@ -8,7 +8,7 @@
         Title="Clipboard Viewer" Height="115" Width="800" Closed="ClipboardViewer_Closed" ContentRendered="ClipboardViewer_ContentRendered" SizeChanged="ClipboardViewer_SaveSizeAndLocation" LocationChanged="ClipboardViewer_SaveSizeAndLocation">
     <Window.Resources>
         <ContextMenu x:Key="menu">
-            <MenuItem x:Name="TopMost" Header="Top Most" IsCheckable="True" Checked="MenuItem_Checked" Unchecked="MenuItem_Checked"/>
+            <MenuItem x:Name="TopMost" Header="Top Most" IsCheckable="True" Checked="Topmost_Checked" Unchecked="Topmost_Checked" Initialized="TopMost_Initialized"/>
             <MenuItem x:Name="SelectFont" Header="Select Font" Click="SelectFont_Click"/>
         </ContextMenu>
     </Window.Resources>

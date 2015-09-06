@@ -34,7 +34,7 @@ namespace ClipboardViewer
                 Left = settings.WindowLeft;
                 Top = settings.WindowTop;
             }
-            
+            setTopmost(settings.Topmost, false);
         }
 
         private enum CBStatus
@@ -92,7 +92,7 @@ namespace ClipboardViewer
                     {
                         var tbs = new StringBuilder(tbLen * 4);
                         for (int i = 0; i < tbLen; i++)
-                            tbs.Append("\ue001\ue002\ue002\ue003");
+                            tbs.Append("\ue001\ue003");
                         var item = new TextBlock(new Run(tbs.ToString()));
                         item.FontFamily = wsFontFamily;
                         item.Foreground = Brushes.Red;
@@ -170,21 +170,37 @@ namespace ClipboardViewer
                 clipboardHelper.DeregisterHandler();
         }
 
-        private void MenuItem_Checked(object sender, RoutedEventArgs e)
-        {
-            var menuItem = sender as MenuItem;
-            Topmost = menuItem.IsChecked;
-            if (origTitle == null)
-                origTitle = Title;
-            if (Topmost)
-                Title = origTitle + " (Top Most)";
-            else
-                Title = origTitle;
-        }
-
         public void Dispose()
         {
             clipboardHelper.Dispose();
+        }
+
+        private void TopMost_Initialized(object sender, EventArgs e)
+        {
+            var menuItem = sender as MenuItem;
+            menuItem.IsChecked = Topmost;
+        }
+        private void setTopmost(bool isTopmost, bool isSave)
+        {
+            if (origTitle == null)
+                origTitle = Title;
+            Topmost = isTopmost;
+            if (isTopmost)
+                Title = origTitle + " (Top Most)";
+            else
+                Title = origTitle;
+            if (isSave)
+            {
+                var settings = Properties.Settings.Default;
+                settings.Topmost = isTopmost;
+                settings.Save();
+            }
+        }
+
+        private void Topmost_Checked(object sender, RoutedEventArgs e)
+        {
+            var menuItem = sender as MenuItem;
+            setTopmost(menuItem.IsChecked, true);
         }
 
         private void SelectFont_Click(object sender, RoutedEventArgs e)
@@ -219,7 +235,7 @@ namespace ClipboardViewer
 
         private void ClipboardViewer_SaveSizeAndLocation(object sender, SizeChangedEventArgs e)
         {
-            ClipboardViewer_SaveSizeAndLocation(sender, (EventArgs) e);
+            ClipboardViewer_SaveSizeAndLocation(sender, (EventArgs)e);
         }
     }
 }
