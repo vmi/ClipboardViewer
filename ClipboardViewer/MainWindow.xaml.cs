@@ -14,12 +14,12 @@ namespace ClipboardViewer
     /// </summary>
     public sealed partial class MainWindow : Window, IDisposable
     {
-        private static Regex TOKEN_RE = new Regex(@"\G(?:(?<nl>(?:\r\n?|\n)+)|(?<tab>\t+)|(?<sp> +)|(?<wsp>\u3000+)|(?<ctrl[\p{Cc}\p{Zs}-[\r\n\t \u3000]]+)|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
-        private static string NL = Environment.NewLine;
+        private static Regex TOKEN_RE = new Regex(@"\G(?:(?<nl>(?:\r\n?|\n)+)|(?<tb>\t+)|(?<sp> +)|(?<ws>\u3000+)|(?<cs>[\p{Cc}\p{Zs}])|(?<ch>[^\p{Cc}\p{Zs}]+))", RegexOptions.Singleline);
 
         private string origTitle = null;
         private ClipboardHelper clipboardHelper = new ClipboardHelper();
         private FontFamily fontFamily = new FontFamily("Meiryo");
+        private FontFamily wsFontFamily = new FontFamily("Meiryo");
         private double fontSize = 12;
 
         public MainWindow()
@@ -27,106 +27,128 @@ namespace ClipboardViewer
             InitializeComponent();
         }
 
-        private void DrawClipboard()
+        private Paragraph NewParagraph()
         {
-            richTextBox.Document.Blocks.Clear();
             var paragraph = new Paragraph();
             paragraph.FontFamily = fontFamily;
             paragraph.FontSize = fontSize;
-            var textBlock = new TextBlock();
-            paragraph.Inlines.Add(textBlock);
+            return paragraph;
+        }
+
+        private enum CBStatus
+        {
+            Text,
+            EmptyText,
+            NotText,
+            Exception
+        }
+
+        private void DrawClipboard()
+        {
+            richTextBox.Document.Blocks.Clear();
+            var paragraph = NewParagraph();
+            CBStatus cbStatus;
+            string cbText;
             if (Clipboard.ContainsText())
             {
-                var cbText = Clipboard.GetText();
-                for (var match = TOKEN_RE.Match(cbText); match.Success; match = match.NextMatch())
+                try
                 {
-                    var nl = match.Groups["nl"];
-                    if (nl.Length > 0)
-                    {
-                        var len = nl.Value.Replace("\r\n", "\n").Length;
-                        var text = new StringBuilder((1 + NL.Length) * len);
-                        for (var i = 0; i < len; i++)
-                            text.Append('⏎').Append(NL);
-                        var elem = new Run(text.ToString());
-                        elem.Foreground = Brushes.Red;
-                        textBlock.Inlines.Add(elem);
-                        continue;
-                    }
-                    var tab = match.Groups["tab"];
-                    if (tab.Length > 0)
-                    {
-                        var text = new string('↦', tab.Length);
-                        var elem = new TextBlock(new Run(text));
-                        elem.Foreground = Brushes.Red;
-                        elem.LayoutTransform = new ScaleTransform(2, 1);
-                        textBlock.Inlines.Add(elem);
-                        continue;
-                    }
-                    var sp = match.Groups["sp"];
-                    if (sp.Length > 0)
-                    {
-                        var text = new string('␣', sp.Length);
-                        var elem = new TextBlock(new Run(text));
-                        elem.Foreground = Brushes.Red;
-                        elem.Padding = new Thickness(1, 0, 1, 0);
-                        elem.LayoutTransform = new ScaleTransform(0.75, 1);
-                        textBlock.Inlines.Add(elem);
-                        continue;
-                    }
-                    var wsp = match.Groups["wsp"];
-                    if (wsp.Length > 0)
-                    {
-                        var text = new string('□', wsp.Length);
-                        var elem = new Run(text);
-                        elem.Foreground = Brushes.Red;
-                        textBlock.Inlines.Add(elem);
-                        continue;
-                    }
-                    var ctrl = match.Groups["ctrl"];
-                    if (ctrl.Length > 0)
-                    {
-                        var text = new StringBuilder(ctrl.Length * 10);
-                        char pc = '\u0000';
-                        foreach (char c in ctrl.Value) {
-                            if (char.IsHighSurrogate(c))
-                            {
-                                pc = c;
-                                continue;
-                            }
-                            else if (char.IsLowSurrogate(c))
-                            {
-                                int cp = char.ConvertToUtf32(pc, c);
-                                text.Append(string.Format("\\u{0:X6}", cp));
-                            }
-                            else if (c <= 0x1f)
-                            {
-                                text.Append('^').Append('@' + c);
-                            }
-                            else if (c == 0x80)
-                            {
-                                text.Append("^?");
-                            }
-                            else
-                            {
-                                text.Append(string.Format("\\u{0:X4}", c));
-                            }
-                        }
-                        var elem = new Run(text.ToString());
-                        elem.Foreground = Brushes.Red;
-                        textBlock.Inlines.Add(elem);
-                        continue;
-                    }
-                    var ch = match.Groups["ch"];
-                    textBlock.Inlines.Add(new Run(match.Groups["ch"].Value));
+                    cbText = Clipboard.GetText();
+                    cbStatus = cbText.Length > 0 ? CBStatus.Text : CBStatus.EmptyText;
+                }
+                catch (Exception e)
+                {
+                    cbText = e.Message;
+                    cbStatus = CBStatus.Exception;
                 }
             }
             else
             {
-                var notText = new Run("(not text)");
-                notText.Foreground = Brushes.Firebrick;
-                notText.FontStyle = FontStyles.Italic;
-                textBlock.Inlines.Add(notText);
+                cbText = null;
+                cbStatus = CBStatus.NotText;
             }
+            if (cbStatus == CBStatus.Text)
+            {
+                for (Match match = TOKEN_RE.Match(cbText); match.Success; match = match.NextMatch())
+                {
+                    var nlMatch = match.Groups["nl"];
+                    if (nlMatch.Length > 0)
+                    {
+                        var len = nlMatch.Value.Replace("\r\n", "\n").Length;
+                        var text = new StringBuilder(len * 2);
+                        for (int i = 0; i < len; i++)
+                            text.Append("⏎\n");
+                        var item = new Run(text.ToString());
+                        item.FontFamily = wsFontFamily;
+                        item.Foreground = Brushes.Red;
+                        paragraph.Inlines.Add(item);
+                        continue;
+                    }
+                    var tbMatch = match.Groups["tb"];
+                    if (tbMatch.Length > 0)
+                    {
+                        var item = new TextBlock(new Run(new string('↦', tbMatch.Length)));
+                        item.FontFamily = wsFontFamily;
+                        item.Foreground = Brushes.Red;
+                        item.LayoutTransform = new ScaleTransform(2, 1);
+                        paragraph.Inlines.Add(item);
+                        continue;
+                    }
+                    var spMatch = match.Groups["sp"];
+                    if (spMatch.Length > 0)
+                    {
+                        var item = new TextBlock(new Run(new string('␣', spMatch.Length)));
+                        item.FontFamily = wsFontFamily;
+                        item.Foreground = Brushes.Red;
+                        item.LayoutTransform = new ScaleTransform(0.75, 1);
+                        paragraph.Inlines.Add(item);
+                        continue;
+                    }
+                    var wsMatch = match.Groups["ws"];
+                    if (wsMatch.Length > 0)
+                    {
+                        var item = new Run(new string('□', wsMatch.Length));
+                        item.FontFamily = wsFontFamily;
+                        item.Foreground = Brushes.Red;
+                        paragraph.Inlines.Add(item);
+                        continue;
+                    }
+                    var csMatch = match.Groups["cs"];
+                    if (csMatch.Length > 0)
+                    {
+                        var item = new Run(string.Format("\\u{0,0:X4}", csMatch.Value[0]));
+                        item.FontFamily = wsFontFamily;
+                        item.Foreground = Brushes.Red;
+                        paragraph.Inlines.Add(item);
+                        continue;
+                    }
+                    paragraph.Inlines.Add(new Run(match.Groups["ch"].Value));
+                }
+            }
+            else
+            {
+                Inline item;
+                switch (cbStatus)
+                {
+                    case CBStatus.EmptyText:
+                        item = new Run("(empty)");
+                        break;
+                    case CBStatus.NotText:
+                        item = new Run("(not text)");
+                        break;
+                    case CBStatus.Exception:
+                        item = new Run("Failed to get a text from clipboard.\n[Exception]\n" + cbText);
+                        break;
+                    default:
+                        // do not reached here.
+                        item = null;
+                        break;
+                }
+                item.Foreground = Brushes.Firebrick;
+                item.FontStyle = FontStyles.Italic;
+                paragraph.Inlines.Add(item);
+            }
+            richTextBox.Document.Blocks.Add(paragraph);
         }
 
         private void ClipboardViewer_ContentRendered(object sender, EventArgs e)

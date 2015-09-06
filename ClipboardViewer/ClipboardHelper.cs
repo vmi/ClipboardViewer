@@ -17,7 +17,6 @@ namespace ClipboardViewer
         internal extern static IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
     }
 
-
     public sealed class ClipboardHelper : IDisposable
     {
         private const int WM_DRAWCLIPBOARD = 0x0308;
