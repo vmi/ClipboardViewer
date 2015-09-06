@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -18,8 +17,8 @@ namespace ClipboardViewer
 
         private string origTitle = null;
         private ClipboardHelper clipboardHelper = new ClipboardHelper();
-        private FontFamily fontFamily = new FontFamily("Meiryo");
-        private FontFamily wsFontFamily = new FontFamily("Meiryo");
+        private FontFamily fontFamily = SystemFonts.MessageFontFamily;
+        private FontFamily wsFontFamily = new FontFamily(new Uri("pack://application:,,,/Resources/"), "./#Whitespaces");
         private double fontSize = 12;
 
         public MainWindow()
@@ -77,7 +76,7 @@ namespace ClipboardViewer
                         var len = nlMatch.Value.Replace("\r\n", "\n").Length;
                         var text = new StringBuilder(len * 2);
                         for (int i = 0; i < len; i++)
-                            text.Append("⏎\n");
+                            text.Append("\ue004\n");
                         var item = new Run(text.ToString());
                         item.FontFamily = wsFontFamily;
                         item.Foreground = Brushes.Red;
@@ -85,9 +84,13 @@ namespace ClipboardViewer
                         continue;
                     }
                     var tbMatch = match.Groups["tb"];
-                    if (tbMatch.Length > 0)
+                    var tbLen = tbMatch.Length;
+                    if (tbLen > 0)
                     {
-                        var item = new TextBlock(new Run(new string('↦', tbMatch.Length)));
+                        var tbs = new StringBuilder(tbLen * 4);
+                        for (int i = 0; i < tbLen; i++)
+                            tbs.Append("\ue001\ue002\ue002\ue003");
+                        var item = new TextBlock(new Run(tbs.ToString()));
                         item.FontFamily = wsFontFamily;
                         item.Foreground = Brushes.Red;
                         item.LayoutTransform = new ScaleTransform(2, 1);
@@ -97,7 +100,7 @@ namespace ClipboardViewer
                     var spMatch = match.Groups["sp"];
                     if (spMatch.Length > 0)
                     {
-                        var item = new TextBlock(new Run(new string('␣', spMatch.Length)));
+                        var item = new TextBlock(new Run(new string(' ', spMatch.Length)));
                         item.FontFamily = wsFontFamily;
                         item.Foreground = Brushes.Red;
                         item.LayoutTransform = new ScaleTransform(0.75, 1);
@@ -107,7 +110,7 @@ namespace ClipboardViewer
                     var wsMatch = match.Groups["ws"];
                     if (wsMatch.Length > 0)
                     {
-                        var item = new Run(new string('□', wsMatch.Length));
+                        var item = new Run(new string('\u3000', wsMatch.Length));
                         item.FontFamily = wsFontFamily;
                         item.Foreground = Brushes.Red;
                         paragraph.Inlines.Add(item);

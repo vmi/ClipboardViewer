@@ -18,7 +18,6 @@
                     <Setter Property="Margin" Value="0" />
                 </Style>
             </RichTextBox.Resources>
-            <FlowDocument/>
         </RichTextBox>
 
     </Grid>
