@@ -12,14 +12,7 @@
             <MenuItem x:Name="SelectFont" Header="Select Font" Click="SelectFont_Click"/>
         </ContextMenu>
     </Window.Resources>
-    <Grid>
-        <RichTextBox x:Name="richTextBox" HorizontalAlignment="Left" VerticalScrollBarVisibility="Auto" IsReadOnly="True" ContextMenu="{DynamicResource menu}" UndoLimit="0" Grid.ColumnSpan="2">
-            <RichTextBox.Resources>
-                <Style TargetType="{x:Type Paragraph}">
-                    <Setter Property="Margin" Value="0" />
-                </Style>
-            </RichTextBox.Resources>
-        </RichTextBox>
-
-    </Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <TextBlock x:Name="view" ContextMenu="{DynamicResource menu}" TextWrapping="Wrap" />
+        </ScrollViewer>
 </Window>
